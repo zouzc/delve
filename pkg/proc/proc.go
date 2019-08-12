@@ -116,7 +116,7 @@ func FindFunctionLocation(p Process, funcName string, lineOffset int) (uint64, e
 }
 
 // Next continues execution until the next source line.
-func Next(dbp Process) (err error) {
+func Next(dbp Process) error {
 	if _, err := dbp.Valid(); err != nil {
 		return err
 	}
@@ -124,9 +124,8 @@ func Next(dbp Process) (err error) {
 		return fmt.Errorf("next while nexting")
 	}
 
-	if err = next(dbp, false, false); err != nil {
-		dbp.ClearInternalBreakpoints()
-		return
+	if err := next(dbp, false, false); err != nil {
+		return err
 	}
 
 	return Continue(dbp)
@@ -315,7 +314,7 @@ func stepInstructionOut(dbp Process, curthread Thread, fnname1, fnname2 string) 
 
 // Step will continue until another source line is reached.
 // Will step into functions.
-func Step(dbp Process) (err error) {
+func Step(dbp Process) error {
 	if _, err := dbp.Valid(); err != nil {
 		return err
 	}
@@ -323,12 +322,11 @@ func Step(dbp Process) (err error) {
 		return fmt.Errorf("next while nexting")
 	}
 
-	if err = next(dbp, true, false); err != nil {
+	if err := next(dbp, true, false); err != nil {
 		switch err.(type) {
 		case ErrThreadBlocked: // Noop
 		default:
-			dbp.ClearInternalBreakpoints()
-			return
+			return err
 		}
 	}
 
