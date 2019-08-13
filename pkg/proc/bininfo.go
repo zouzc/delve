@@ -99,8 +99,6 @@ var ErrCouldNotDetermineRelocation = errors.New("could not determine the base ad
 // section or find an external debug info file.
 var ErrNoDebugInfoFound = errors.New("could not open debug info")
 
-const dwarfGoLanguage = 22 // DW_LANG_Go (from DWARF v5, section 7.12, page 231)
-
 type compileUnit struct {
 	name   string // univocal name for non-go compile units
 	lowPC  uint64
@@ -1269,7 +1267,7 @@ func (bi *BinaryInfo) loadDebugInfoMaps(image *Image, debugLineBytes []byte, wg 
 			cu.image = image
 			cu.entry = entry
 			cu.offset = entry.Offset
-			if lang, _ := entry.Val(dwarf.AttrLanguage).(int64); lang == dwarfGoLanguage {
+			if lang, _ := entry.Val(dwarf.AttrLanguage).(int64); lang == godwarf.DwarfGoLanguage {
 				cu.isgo = true
 			}
 			cu.name, _ = entry.Val(dwarf.AttrName).(string)
