@@ -8,4 +8,9 @@ const DwarfGoLanguage = 22
 // object file that has been linked into the
 // process being debugged.
 type DwarfInfo struct {
+	// DebugInfoDirectories is a list of all directories to look it
+	// where DWARF debug information may be kept. Generally this is
+	// the same as the binary, but several distrubutions will ship
+	// debug informatio seperate from the actual binary.
+	DebugInfoDirectories []string
 }

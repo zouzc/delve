@@ -41,7 +41,7 @@ type BinaryInfo struct {
 	// GOOS operating system this binary is executing on.
 	GOOS string
 
-	debugInfoDirectories []string
+	dwarf *godwarf.DwarfInfo
 
 	// Functions is a list of all DW_TAG_subprogram entries in debug_info, sorted by entry point
 	Functions []Function
@@ -300,7 +300,11 @@ type ElfDynamicSection struct {
 
 // NewBinaryInfo returns an initialized but unloaded BinaryInfo struct.
 func NewBinaryInfo(goos, goarch string) *BinaryInfo {
-	r := &BinaryInfo{GOOS: goos, nameOfRuntimeType: make(map[uintptr]nameOfRuntimeTypeEntry)}
+	r := &BinaryInfo{
+		GOOS:              goos,
+		dwarf:             &godwarf.DwarfInfo{},
+		nameOfRuntimeType: make(map[uintptr]nameOfRuntimeTypeEntry),
+	}
 
 	// TODO: find better way to determine proc arch (perhaps use executable file info).
 	switch goarch {
@@ -317,8 +321,7 @@ func (bi *BinaryInfo) LoadBinaryInfo(path string, entryPoint uint64, debugInfoDi
 	if err == nil {
 		bi.lastModified = fi.ModTime()
 	}
-
-	bi.debugInfoDirectories = debugInfoDirs
+	bi.dwarf.DebugInfoDirectories = debugInfoDirs
 
 	return bi.AddImage(path, entryPoint)
 }
@@ -893,7 +896,7 @@ func loadBinaryInfoElf(bi *BinaryInfo, image *Image, path string, addr uint64, w
 	if err != nil {
 		var sepFile *os.File
 		var serr error
-		sepFile, dwarfFile, serr = bi.openSeparateDebugInfo(image, elfFile, bi.debugInfoDirectories)
+		sepFile, dwarfFile, serr = bi.openSeparateDebugInfo(image, elfFile, bi.dwarf.DebugInfoDirectories)
 		if serr != nil {
 			return serr
 		}
