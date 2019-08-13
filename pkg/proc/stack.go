@@ -389,7 +389,7 @@ func (it *stackIterator) Err() error {
 // frameBase calculates the frame base pseudo-register for DWARF for fn and
 // the current frame.
 func (it *stackIterator) frameBase(fn *Function) int64 {
-	rdr := fn.cu.image.dwarfReader
+	rdr := fn.cu.image.dwarf.Reader()
 	rdr.Seek(fn.offset)
 	e, err := rdr.Next()
 	if err != nil {
@@ -468,7 +468,7 @@ func (it *stackIterator) appendInlineCalls(frames []Stackframe, frame Stackframe
 
 	irdr := reader.InlineStack(image.dwarf, frame.Call.Fn.offset, reader.ToRelAddr(callpc, image.StaticBase))
 	for irdr.Next() {
-		entry, offset := reader.LoadAbstractOrigin(irdr.Entry(), image.dwarfReader)
+		entry, offset := reader.LoadAbstractOrigin(irdr.Entry(), image.dwarf.Reader())
 
 		fnname, okname := entry.Val(dwarf.AttrName).(string)
 		fileidx, okfileidx := entry.Val(dwarf.AttrCallFile).(int64)
@@ -740,7 +740,7 @@ func (d *Defer) EvalScope(thread Thread) (*EvalScope, error) {
 	scope.Regs.CFA = (int64(d.variable.Addr) + d.variable.RealType.Common().ByteSize)
 	scope.Regs.Regs[scope.Regs.SPRegNum].Uint64Val = uint64(scope.Regs.CFA - int64(bi.Arch.PtrSize()))
 
-	rdr := scope.Fn.cu.image.dwarfReader
+	rdr := scope.Fn.cu.image.dwarf.Reader()
 	rdr.Seek(scope.Fn.offset)
 	e, err := rdr.Next()
 	if err != nil {

@@ -792,7 +792,7 @@ func (v *Variable) structMember(memberName string) (*Variable, error) {
 }
 
 func readVarEntry(varEntry *dwarf.Entry, image *Image) (entry reader.Entry, name string, typ godwarf.Type, err error) {
-	entry, _ = reader.LoadAbstractOrigin(varEntry, image.dwarfReader)
+	entry, _ = reader.LoadAbstractOrigin(varEntry, image.dwarf.Reader())
 
 	name, ok := entry.Val(dwarf.AttrName).(string)
 	if !ok {

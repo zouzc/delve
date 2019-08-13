@@ -458,9 +458,8 @@ type Image struct {
 	closer         io.Closer
 	sepDebugCloser io.Closer
 
-	dwarf       *dwarf.Data
-	dwarfReader *dwarf.Reader
-	loclist     loclistReader
+	dwarf   *dwarf.Data
+	loclist loclistReader
 
 	typeCache map[dwarf.Offset]godwarf.Type
 
@@ -904,8 +903,6 @@ func loadBinaryInfoElf(bi *BinaryInfo, image *Image, path string, addr uint64, w
 		}
 	}
 
-	image.dwarfReader = image.dwarf.Reader()
-
 	debugLineBytes, err := godwarf.GetDebugSectionElf(dwarfFile, "line")
 	if err != nil {
 		return err
@@ -1015,8 +1012,6 @@ func loadBinaryInfoPE(bi *BinaryInfo, image *Image, path string, entryPoint uint
 		}
 	}
 
-	image.dwarfReader = image.dwarf.Reader()
-
 	debugLineBytes, err := godwarf.GetDebugSectionPE(peFile, "line")
 	if err != nil {
 		return err
@@ -1099,8 +1094,6 @@ func loadBinaryInfoMacho(bi *BinaryInfo, image *Image, path string, entryPoint u
 	if err != nil {
 		return err
 	}
-
-	image.dwarfReader = image.dwarf.Reader()
 
 	debugLineBytes, err := godwarf.GetDebugSectionMacho(exe, "line")
 	if err != nil {

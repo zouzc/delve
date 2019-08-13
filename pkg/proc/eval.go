@@ -370,7 +370,7 @@ func (scope *EvalScope) PackageVariables(cfg LoadConfig) ([]*Variable, error) {
 func (scope *EvalScope) findGlobal(name string) (*Variable, error) {
 	for _, pkgvar := range scope.BinInfo.packageVars {
 		if pkgvar.name == name || strings.HasSuffix(pkgvar.name, "/"+name) {
-			reader := pkgvar.cu.image.dwarfReader
+			reader := pkgvar.cu.image.dwarf.Reader()
 			reader.Seek(pkgvar.offset)
 			entry, err := reader.Next()
 			if err != nil {

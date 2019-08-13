@@ -800,8 +800,9 @@ func fakeFunctionEntryScope(scope *EvalScope, fn *Function, cfa int64, sp uint64
 	scope.Regs.CFA = cfa
 	scope.Regs.Regs[scope.Regs.SPRegNum].Uint64Val = sp
 
-	fn.cu.image.dwarfReader.Seek(fn.offset)
-	e, err := fn.cu.image.dwarfReader.Next()
+	reader := fn.cu.image.dwarf.Reader()
+	reader.Seek(fn.offset)
+	e, err := reader.Next()
 	if err != nil {
 		return err
 	}
