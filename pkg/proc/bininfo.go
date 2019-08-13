@@ -58,9 +58,6 @@ type BinaryInfo struct {
 
 	lastModified time.Time // Time the executable of this process was last modified
 
-	closer         io.Closer
-	sepDebugCloser io.Closer
-
 	// Maps package names to package paths, needed to lookup types inside DWARF info
 	packageMap map[string]string
 
