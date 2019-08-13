@@ -34,7 +34,7 @@ type DebugLineInfo struct {
 
 	// lastMachineCache[pc] is a state machine stopped at an address after pc
 	lastMachineCache map[uint64]*StateMachine
-	
+
 	// staticBase is the address at which the executable is loaded, 0 for non-PIEs
 	staticBase uint64
 }
@@ -66,16 +66,16 @@ func ParseAll(data []byte, logfn func(string, ...interface{}), staticBase uint64
 // Parse parses a single debug_line segment from buf. Compdir is the
 // DW_AT_comp_dir attribute of the associated compile unit.
 func Parse(compdir string, buf *bytes.Buffer, logfn func(string, ...interface{}), staticBase uint64) *DebugLineInfo {
-	dbl := new(DebugLineInfo)
-	dbl.Logf = logfn
-	dbl.staticBase = staticBase
-	dbl.Lookup = make(map[string]*FileEntry)
+	dbl := &DebugLineInfo{
+		Logf:              logfn,
+		staticBase:        staticBase,
+		Lookup:            make(map[string]*FileEntry),
+		stateMachineCache: make(map[uint64]*StateMachine),
+		lastMachineCache:  make(map[uint64]*StateMachine),
+	}
 	if compdir != "" {
 		dbl.IncludeDirs = append(dbl.IncludeDirs, compdir)
 	}
-
-	dbl.stateMachineCache = make(map[uint64]*StateMachine)
-	dbl.lastMachineCache = make(map[uint64]*StateMachine)
 
 	parseDebugLinePrologue(dbl, buf)
 	parseIncludeDirs(dbl, buf)
