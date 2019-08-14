@@ -275,7 +275,11 @@ func loadBinaryInfo(bi *BinaryInfo, image *Image, path string, entryPoint uint64
 	case "windows":
 		return loadBinaryInfoPE(bi, image, path, entryPoint, &wg)
 	case "darwin":
-		return loadBinaryInfoMacho(bi, image, path, entryPoint, &wg)
+		err := loadBinaryInfoMacho(bi, image, path, entryPoint, &wg)
+		if err != nil {
+			return err
+		}
+		bi.setGStructOffsetMacho()
 	}
 	return errors.New("unsupported operating system")
 }
@@ -544,7 +548,7 @@ func (bi *BinaryInfo) LoadImageFromData(dwdata *dwarf.Data, debugFrameBytes, deb
 
 	image.loclistInit(debugLocBytes, bi.Arch.PtrSize())
 
-	bi.loadDebugInfoMaps(image, debugLineBytes, nil, nil)
+	bi.loadDebugInfoMaps(image, debugLineBytes, nil)
 
 	bi.Images = append(bi.Images, image)
 }
@@ -856,7 +860,7 @@ func loadBinaryInfoElf(bi *BinaryInfo, image *Image, path string, addr uint64, w
 
 	wg.Add(2)
 	go bi.parseDebugFrameElf(image, dwarfFile, wg)
-	go bi.loadDebugInfoMaps(image, debugLineBytes, wg, nil)
+	go bi.loadDebugInfoMaps(image, debugLineBytes, wg)
 	if image.index == 0 {
 		// determine g struct offset only when loading the executable file
 		wg.Add(1)
@@ -965,7 +969,7 @@ func loadBinaryInfoPE(bi *BinaryInfo, image *Image, path string, entryPoint uint
 
 	wg.Add(2)
 	go bi.parseDebugFramePE(image, peFile, wg)
-	go bi.loadDebugInfoMaps(image, debugLineBytes, wg, nil)
+	go bi.loadDebugInfoMaps(image, debugLineBytes, wg)
 
 	// Use ArbitraryUserPointer (0x28) as pointer to pointer
 	// to G struct per:
@@ -1048,7 +1052,7 @@ func loadBinaryInfoMacho(bi *BinaryInfo, image *Image, path string, entryPoint u
 
 	wg.Add(2)
 	go bi.parseDebugFrameMacho(image, exe, wg)
-	go bi.loadDebugInfoMaps(image, debugLineBytes, wg, bi.setGStructOffsetMacho)
+	go bi.loadDebugInfoMaps(image, debugLineBytes, wg)
 	return nil
 }
 
@@ -1173,7 +1177,7 @@ func (bi *BinaryInfo) registerTypeToPackageMap(entry *dwarf.Entry) {
 	bi.packageMap[name] = path
 }
 
-func (bi *BinaryInfo) loadDebugInfoMaps(image *Image, debugLineBytes []byte, wg *sync.WaitGroup, cont func()) {
+func (bi *BinaryInfo) loadDebugInfoMaps(image *Image, debugLineBytes []byte, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -1275,10 +1279,6 @@ func (bi *BinaryInfo) loadDebugInfoMaps(image *Image, debugLineBytes []byte, wg 
 	}
 	sort.Strings(bi.Sources)
 	bi.Sources = uniq(bi.Sources)
-
-	if cont != nil {
-		cont()
-	}
 }
 
 // loadDebugInfoMapsCompileUnit loads entry from a single compile unit.
