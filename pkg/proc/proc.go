@@ -534,7 +534,7 @@ func GoroutinesInfo(dbp Process, start, count int) ([]*G, int, error) {
 			allg = append(allg, &G{Unreadable: err})
 			continue
 		}
-		g, err := gvar.parseG()
+		g, err := parseG(gvar)
 		if err != nil {
 			allg = append(allg, &G{Unreadable: err})
 			continue

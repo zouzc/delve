@@ -1,16 +1,13 @@
 package proc
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"path/filepath"
-	"reflect"
 	"strings"
 
-	"github.com/go-delve/delve/pkg/dwarf/godwarf"
 	"github.com/go-delve/delve/pkg/dwarf/reader"
 )
 
@@ -419,50 +416,6 @@ func setStepIntoBreakpoint(dbp Process, text []AsmInstruction, cond ast.Expr) er
 	return nil
 }
 
-func getGVariable(thread Thread) (*Variable, error) {
-	regs, err := thread.Registers(false)
-	if err != nil {
-		return nil, err
-	}
-
-	gaddr, hasgaddr := regs.GAddr()
-	if !hasgaddr {
-		gaddrbs := make([]byte, thread.Arch().PtrSize())
-		_, err := thread.ReadMemory(gaddrbs, uintptr(regs.TLS()+thread.BinInfo().GStructOffset()))
-		if err != nil {
-			return nil, err
-		}
-		gaddr = binary.LittleEndian.Uint64(gaddrbs)
-	}
-
-	return newGVariable(thread, uintptr(gaddr), thread.Arch().DerefTLS())
-}
-
-func newGVariable(thread Thread, gaddr uintptr, deref bool) (*Variable, error) {
-	typ, err := thread.BinInfo().findType("runtime.g")
-	if err != nil {
-		return nil, err
-	}
-
-	name := ""
-
-	if deref {
-		typ = &godwarf.PtrType{
-			CommonType: godwarf.CommonType{
-				ByteSize:    int64(thread.Arch().PtrSize()),
-				Name:        "",
-				ReflectKind: reflect.Ptr,
-				Offset:      0,
-			},
-			Type: typ,
-		}
-	} else {
-		name = "runtime.curg"
-	}
-
-	return newVariableFromThread(thread, name, gaddr, typ), nil
-}
-
 // GetG returns information on the G (goroutine) that is executing on this thread.
 //
 // The G structure for a thread is stored in thread local storage. Here we simply
@@ -482,12 +435,12 @@ func GetG(thread Thread) (*G, error) {
 		// When threads are executing runtime.clone the value of TLS is unreliable.
 		return nil, nil
 	}
-	gaddr, err := getGVariable(thread)
+	gvar, err := getGVariable(thread)
 	if err != nil {
 		return nil, err
 	}
 
-	g, err := gaddr.parseG()
+	g, err := parseG(gvar)
 	if err != nil {
 		return nil, err
 	}
@@ -503,7 +456,7 @@ func GetG(thread Thread) (*G, error) {
 		if err != nil {
 			return nil, err
 		}
-		g, err = curgvar.parseG()
+		g, err = parseG(curgvar)
 		if err != nil {
 			return nil, err
 		}
@@ -514,34 +467,6 @@ func GetG(thread Thread) (*G, error) {
 		g.CurrentLoc = *loc
 	}
 	return g, nil
-}
-
-// ThreadScope returns an EvalScope for this thread.
-func ThreadScope(thread Thread) (*EvalScope, error) {
-	locations, err := ThreadStacktrace(thread, 1)
-	if err != nil {
-		return nil, err
-	}
-	if len(locations) < 1 {
-		return nil, errors.New("could not decode first frame")
-	}
-	return FrameToScope(thread.BinInfo(), thread, nil, locations...), nil
-}
-
-// GoroutineScope returns an EvalScope for the goroutine running on this thread.
-func GoroutineScope(thread Thread) (*EvalScope, error) {
-	locations, err := ThreadStacktrace(thread, 1)
-	if err != nil {
-		return nil, err
-	}
-	if len(locations) < 1 {
-		return nil, errors.New("could not decode first frame")
-	}
-	g, err := GetG(thread)
-	if err != nil {
-		return nil, err
-	}
-	return FrameToScope(thread.BinInfo(), thread, g, locations...), nil
 }
 
 // onNextGoroutine returns true if this thread is on the goroutine requested by the current 'next' command
