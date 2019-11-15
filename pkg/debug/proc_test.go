@@ -4023,7 +4023,7 @@ func TestDeadlockBreakpoint(t *testing.T) {
 	if buildMode == "pie" {
 		t.Skip("See https://github.com/golang/go/issues/29322")
 	}
-	deadlockBp := proc.FatalThrow
+	deadlockBp := debug.FatalThrow
 	if !goversion.VersionAfterOrEqual(runtime.Version(), 1, 11) {
 		deadlockBp = proc.UnrecoveredPanic
 	}
