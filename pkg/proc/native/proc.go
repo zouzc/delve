@@ -362,7 +362,6 @@ func (dbp *Process) Initialize() error {
 	if err := initialize(dbp); err != nil {
 		return err
 	}
-	dbp.Common().ExePath = findExePath(dbp.Common().ExePath, dbp.Pid())
 	return dbp.updateThreadList()
 }
 
