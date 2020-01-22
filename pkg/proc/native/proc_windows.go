@@ -434,11 +434,6 @@ func (dbp *Process) stop(trapthread *Thread) (err error) {
 	// call to _ContinueDebugEvent will resume execution of some of the
 	// target threads.
 
-	err = trapthread.SetCurrentBreakpoint(true)
-	if err != nil {
-		return err
-	}
-
 	for _, thread := range dbp.threads {
 		_, err := _SuspendThread(thread.os.hThread)
 		if err != nil {
@@ -460,10 +455,6 @@ func (dbp *Process) stop(trapthread *Thread) (err error) {
 		}
 		if tid == 0 {
 			break
-		}
-		err = dbp.threads[tid].SetCurrentBreakpoint(true)
-		if err != nil {
-			return err
 		}
 	}
 

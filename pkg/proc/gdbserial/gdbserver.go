@@ -708,10 +708,6 @@ continueLoop:
 		}
 	}
 
-	if err := p.setCurrentBreakpoints(); err != nil {
-		return nil, err
-	}
-
 	for _, thread := range p.threads {
 		if thread.strID == threadID {
 			var err error
@@ -869,7 +865,7 @@ func (p *Process) Restart(pos string) error {
 		p.conn.setBreakpoint(addr)
 	}
 
-	return p.setCurrentBreakpoints()
+	return nil
 }
 
 // When executes the 'when' command for the Mozilla RR backend.
@@ -1143,30 +1139,6 @@ func (p *Process) updateThreadList(tu *threadUpdater) error {
 	for _, thread := range p.threads {
 		if err := thread.reloadRegisters(); err != nil {
 			return err
-		}
-	}
-	return nil
-}
-
-func (p *Process) setCurrentBreakpoints() error {
-	if p.threadStopInfo {
-		for _, th := range p.threads {
-			if th.setbp {
-				err := th.SetCurrentBreakpoint(true)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-	if !p.threadStopInfo {
-		for _, th := range p.threads {
-			if th.CurrentBreakpoint.Breakpoint == nil {
-				err := th.SetCurrentBreakpoint(true)
-				if err != nil {
-					return err
-				}
-			}
 		}
 	}
 	return nil

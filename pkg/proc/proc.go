@@ -186,6 +186,8 @@ func Continue(dbp *Target) error {
 
 		threads := dbp.ThreadList()
 
+		setCurrentBreakpoints(threads)
+
 		callInjectionDone, err := callInjectionProtocol(dbp, threads)
 		if err != nil {
 			return err

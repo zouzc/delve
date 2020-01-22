@@ -43,5 +43,19 @@ func (t *Target) ClearAllGCache() {
 
 func (t *Target) Restart(from string) error {
 	t.ClearAllGCache()
-	return t.Process.Restart(from)
+	if err := t.Process.Restart(from); err != nil {
+		return err
+	}
+	return setCurrentBreakpoints(t.Process.ThreadList())
+}
+
+func setCurrentBreakpoints(threads []Thread) error {
+	for _, th := range threads {
+		if th.Breakpoint().Breakpoint == nil {
+			if err := th.SetCurrentBreakpoint(true); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
