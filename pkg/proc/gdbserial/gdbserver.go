@@ -622,9 +622,9 @@ const (
 
 // ContinueOnce will continue execution of the process until
 // a breakpoint is hit or signal is received.
-func (p *Process) ContinueOnce() (proc.Thread, error) {
+func (p *Process) ContinueOnce() (proc.Thread, []proc.Thread, error) {
 	if p.exited {
-		return nil, &proc.ErrProcessExited{Pid: p.conn.pid}
+		return nil, nil, &proc.ErrProcessExited{Pid: p.conn.pid}
 	}
 
 	if p.conn.direction == proc.Forward {
@@ -632,7 +632,7 @@ func (p *Process) ContinueOnce() (proc.Thread, error) {
 		for _, thread := range p.threads {
 			if thread.CurrentBreakpoint.Breakpoint != nil {
 				if err := thread.stepInstruction(&threadUpdater{p: p}); err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 			}
 		}
@@ -657,7 +657,7 @@ continueLoop:
 			if _, exited := err.(proc.ErrProcessExited); exited {
 				p.exited = true
 			}
-			return nil, err
+			return nil, nil, err
 		}
 
 		// 0x5 is always a breakpoint, a manual stop either manifests as 0x13
@@ -699,41 +699,42 @@ continueLoop:
 	}
 
 	if err := p.updateThreadList(&tu); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if p.BinInfo().GOOS == "linux" {
 		if err := linutil.ElfUpdateSharedObjects(p); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	if err := p.setCurrentBreakpoints(); err != nil {
-		return nil, err
-	}
-
-	for _, thread := range p.threads {
-		if thread.strID == threadID {
-			var err error
-			switch sig {
-			case 0x91:
-				err = errors.New("bad access")
-			case 0x92:
-				err = errors.New("bad instruction")
-			case 0x93:
-				err = errors.New("arithmetic exception")
-			case 0x94:
-				err = errors.New("emulation exception")
-			case 0x95:
-				err = errors.New("software exception")
-			case 0x96:
-				err = errors.New("breakpoint exception")
+	tid, err := strconv.ParseUint(threadID, 16, 32)
+	if thread, ok := p.threads[int(tid)]; err == nil && ok {
+		var err error
+		switch sig {
+		case 0x91:
+			err = errors.New("bad access")
+		case 0x92:
+			err = errors.New("bad instruction")
+		case 0x93:
+			err = errors.New("arithmetic exception")
+		case 0x94:
+			err = errors.New("emulation exception")
+		case 0x95:
+			err = errors.New("software exception")
+		case 0x96:
+			err = errors.New("breakpoint exception")
+		}
+		r := make([]proc.Thread, 0, len(p.threads))
+		for _, t := range p.threads {
+			if t.strID != threadID {
+				r = append(r, t)
 			}
-			return thread, err
 		}
+		return thread, r, err
 	}
 
-	return nil, fmt.Errorf("could not find thread %s", threadID)
+	return nil, nil, fmt.Errorf("could not find thread %s", threadID)
 }
 
 // SetSelectedGoroutine will set internally the goroutine that should be
