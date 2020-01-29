@@ -71,15 +71,12 @@ func PostInitializationSetup(p Process, path string, debugInfoDirs []string, wri
 	g, _ := GetG(p.CurrentThread())
 	p.SetSelectedGoroutine(g)
 
-	createUnrecoveredPanicBreakpoint(p, writeBreakpoint)
-	createFatalThrowBreakpoint(p, writeBreakpoint)
-
 	return nil
 }
 
 // FindFileLocation returns the PC for a given file:line.
 // Assumes that `file` is normalized to lower case and '/' on Windows.
-func FindFileLocation(p Process, fileName string, lineno int) ([]uint64, error) {
+func FindFileLocation(p *Target, fileName string, lineno int) ([]uint64, error) {
 	pcs, err := p.BinInfo().LineToPC(fileName, lineno)
 	if err != nil {
 		return nil, err
@@ -108,7 +105,7 @@ func (err *ErrFunctionNotFound) Error() string {
 
 // FindFunctionLocation finds address of a function's line
 // If lineOffset is passed FindFunctionLocation will return the address of that line
-func FindFunctionLocation(p Process, funcName string, lineOffset int) ([]uint64, error) {
+func FindFunctionLocation(p *Target, funcName string, lineOffset int) ([]uint64, error) {
 	bi := p.BinInfo()
 	origfn := bi.LookupFunc[funcName]
 	if origfn == nil {
@@ -787,7 +784,7 @@ func FrameToScope(bi *BinaryInfo, thread MemoryReadWriter, g *G, frames ...Stack
 
 // createUnrecoveredPanicBreakpoint creates the unrecoverable-panic breakpoint.
 // This function is meant to be called by implementations of the Process interface.
-func createUnrecoveredPanicBreakpoint(p Process, writeBreakpoint WriteBreakpointFn) {
+func createUnrecoveredPanicBreakpoint(p *Target, writeBreakpoint WriteBreakpointFn) {
 	panicpcs, err := FindFunctionLocation(p, "runtime.startpanic", 0)
 	if _, isFnNotFound := err.(*ErrFunctionNotFound); isFnNotFound {
 		panicpcs, err = FindFunctionLocation(p, "runtime.fatalpanic", 0)
@@ -801,7 +798,7 @@ func createUnrecoveredPanicBreakpoint(p Process, writeBreakpoint WriteBreakpoint
 	}
 }
 
-func createFatalThrowBreakpoint(p Process, writeBreakpoint WriteBreakpointFn) {
+func createFatalThrowBreakpoint(p *Target, writeBreakpoint WriteBreakpointFn) {
 	fatalpcs, err := FindFunctionLocation(p, "runtime.fatalthrow", 0)
 	if err == nil {
 		bp, err := p.Breakpoints().SetWithID(fatalThrowID, fatalpcs[0], writeBreakpoint)
@@ -815,7 +812,7 @@ func createFatalThrowBreakpoint(p Process, writeBreakpoint WriteBreakpointFn) {
 // instruction after the prologue for function fn.
 // If sameline is set FirstPCAfterPrologue will always return an
 // address associated with the same line as fn.Entry.
-func FirstPCAfterPrologue(p Process, fn *Function, sameline bool) (uint64, error) {
+func FirstPCAfterPrologue(p *Target, fn *Function, sameline bool) (uint64, error) {
 	pc, _, line, ok := fn.cu.lineInfo.PrologueEndPC(fn.Entry, fn.End)
 	if ok {
 		if !sameline {
